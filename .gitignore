@@ -1,0 +1,45 @@
+# Python bytecode and build artifacts
+__pycache__/
+*.py[oc]
+*.pyd
+*.pyo
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Virtual environments and local Python setup
+.venv/
+venv/
+env/
+.python-version
+
+# Environment files
+.env
+.env.*
+
+# Editors and OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Local archives and generated transcripts
+*.zip
+*.wav
+transcript.txt
+transcript.json
+*_transcript.txt
+*_transcript.json
+
+# Generated meeting and vector-store data
+data/jsons/
+data/vector_store/
+data/meetings/
