@@ -18,7 +18,7 @@ DEFAULT_MODEL = "saaras:v3"
 DEFAULT_MODE = "codemix"
 DEFAULT_LANGUAGE_CODE = "hi-IN"
 DEFAULT_POLL_SECONDS = 5.0
-SARVAM_API_KEY = os.loadenv("SARVAM_API_KEY")
+SARVAM_API_KEY = "sk_5qbk6qgz_UkwlJ8W6W4lJeJ5nsCiyOaJy"
 
 
 def make_output_name(input_path: str) -> str:

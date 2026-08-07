@@ -30,8 +30,16 @@ SUPPORTED_EXTENSIONS = {
     ".flac", ".ogg", ".webm", ".mov", ".aac", ".wma",
 }
 
-#This might work
-GROQ_API_KEYS = os.getenv("GROQ_Transcribe_API_KEY")
+def _load_groq_api_keys() -> list[str]:
+    raw_keys = os.getenv("GROQ_Transcribe_API_KEY", "")
+    if not raw_keys.strip():
+        return []
+    normalized = raw_keys.replace(";", ",")
+    return [key.strip() for key in normalized.split(",") if key.strip()]
+
+
+# This might work
+GROQ_API_KEYS = _load_groq_api_keys()
 
 #Else just paste the one i send here
 # GROQ_API_KEYS = []

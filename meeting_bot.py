@@ -110,16 +110,20 @@ class MeetingBot:
 
     @staticmethod
     def _extract_participants(transcript_text: str) -> list[str]:
-
         participants = []
         seen = set()
+        speaker_pattern = re.compile(r"^(?:\[[^\]]+\]\s*)?([^:]+):")
 
         for raw_line in transcript_text.splitlines():
             line = raw_line.strip()
-            if not line or ":" not in line:
+            if not line:
                 continue
 
-            speaker = line.split(":", 1)[0].strip()
+            match = speaker_pattern.match(line)
+            if not match:
+                continue
+
+            speaker = match.group(1).strip()
             if not speaker:
                 continue
 

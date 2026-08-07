@@ -277,7 +277,7 @@ class VectorStore:
     def add_documents(self, documents: List[Any], embeddings: np.ndarray):
         """ 
         add documents and their embeddings to vector store
-        Documents: liust of langchain documents
+        Documents: list of langchain documents
         embeddings - coresponding embeddings for documents
         """
         if len(documents) != len(embeddings):
