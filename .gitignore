@@ -43,3 +43,9 @@ transcript.json
 data/jsons/
 data/vector_store/
 data/meetings/
+
+#streamlit
+.streamlit/
+
+#chromadb
+.chromadb/
