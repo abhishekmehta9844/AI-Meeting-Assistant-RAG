@@ -4,7 +4,8 @@ from datetime import datetime
 from pathlib import Path
 
 
-MEETINGS_ROOT = Path("./data/meetings")
+import os
+MEETINGS_ROOT = Path(os.path.abspath(__file__)).parent.parent.parent.parent / "data" / "meetings"
 
 
 def ensure_meetings_root() -> Path:

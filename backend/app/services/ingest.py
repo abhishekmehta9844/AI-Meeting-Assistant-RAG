@@ -1,5 +1,5 @@
 # ingest.py
-from rag_pipeline import (
+from app.services.rag_pipeline import (
     process_all_pdfs,
     process_all_jsons,
     split_documents,
@@ -36,6 +36,16 @@ def ingest(
     if reset_collection:
         store.reset_collection()
     store.add_documents(chunks, embeddings)
+    
+    # Also ingest into global store
+    from pathlib import Path
+    global_dir = str(Path(persist_dir).parent.parent / "global_vector_store")
+    global_store = VectorStore(
+        collection_name="global_meetings",
+        persistent_directory=global_dir
+    )
+    # We do NOT reset the global collection!
+    global_store.add_documents(chunks, embeddings)
 
     print(" Ingestion complete")
 

@@ -1,7 +1,7 @@
 import streamlit as st
 
-from meeting_library import list_meetings
-from rag_pipeline import build_rag_v2
+from app.services.meeting_library import list_meetings
+from app.services.rag_pipeline import build_rag_v2
 
 
 st.set_page_config(

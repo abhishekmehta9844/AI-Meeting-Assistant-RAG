@@ -22,8 +22,10 @@ SARVAM_API_KEY = "sk_5qbk6qgz_UkwlJ8W6W4lJeJ5nsCiyOaJy"
 
 
 def make_output_name(input_path: str) -> str:
+    dirname = os.path.dirname(input_path)
     base = os.path.splitext(os.path.basename(input_path))[0]
-    return f"{base}_transcript.txt"
+    filename = f"{base}_transcript.txt"
+    return os.path.join(dirname, filename) if dirname else filename
 
 
 def _resolve_api_key(explicit_api_key: str | None = None) -> str:

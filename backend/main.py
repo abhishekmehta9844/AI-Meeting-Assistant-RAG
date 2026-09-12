@@ -1,4 +1,4 @@
-from rag_pipeline import build_rag
+from app.services.rag_pipeline import build_rag
 
 
 def main():

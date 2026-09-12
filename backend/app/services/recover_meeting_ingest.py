@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from ingest import ingest
-from meeting_library import write_meeting_metadata
-from rag_pipeline import build_rag_v2
+from app.services.ingest import ingest
+from app.services.meeting_library import write_meeting_metadata
+from app.services.rag_pipeline import build_rag_v2
 
 
 MEETINGS_ROOT = Path("./data/meetings")
@@ -296,11 +296,11 @@ def transcribe_audio(audio_file: Path, transcriber: str, meeting_dir: Path) -> t
     transcript_name = transcript_name_for(audio_file)
 
     if transcriber == "sarvam":
-        import sarvam_transcribe
+        from app.services import sarvam_transcribe
 
         generated_path = Path(sarvam_transcribe.process_single_file(str(audio_file)))
     elif transcriber == "whisper":
-        import cloudtranscribe
+        from app.services import cloudtranscribe
 
         cloudtranscribe.process_single_file(str(audio_file))
         generated_path = Path(cloudtranscribe.make_output_name(str(audio_file)))
@@ -492,6 +492,16 @@ def main() -> None:
     payload, document_json_path = build_payload(meeting, transcript_path, transcript_text, transcriber)
     update_metadata(meeting, payload, transcript_path, document_json_path)
     ingest_meeting(meeting)
+
+    print("\n[*] Generating Meeting Summary...")
+    try:
+        from app.services.summary import generate_meeting_summary
+        summary_data = generate_meeting_summary(transcript_text)
+        summary_target = meeting.meeting_dir / "summary.json"
+        summary_target.write_text(json.dumps(summary_data, indent=4), encoding="utf-8")
+        print(f"[*] Summary saved -> {summary_target}")
+    except Exception as e:
+        print(f"[!] Failed to generate summary: {e}")
 
     print("\nMeeting recovery is complete.")
     print(f"Meeting folder: {meeting.meeting_dir}")

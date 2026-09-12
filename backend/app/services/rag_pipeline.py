@@ -21,7 +21,7 @@ from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 import os
 
-from prompt import MASTER_PROMPTT
+from app.services.prompt import MASTER_PROMPTT
 
 def content_hash(text):
     return hashlib.md5(text.encode("utf-8")).hexdigest()
@@ -592,6 +592,96 @@ Answer:
         output["context"] = context
 
     return output
+
+def rag_advanced_v2_stream(
+    query: str,
+    retriever,
+    llm,
+    *,
+    retrieve_k: int = 12,
+    final_k: int = 4,
+    min_score: float = 0.25,
+    max_context_chars: int = 3500
+):
+    # 1. Broad retrieval (recall phase)
+    retrieved = retriever.retrive(
+        query,
+        top_k=retrieve_k,
+        score_threshold=0.0
+    )
+
+    if not retrieved:
+        yield {"type": "metadata", "sources": [], "confidence": 0.0}
+        yield {"type": "token", "content": "I don't know. No relevant information was found."}
+        return
+
+    # 2. Hard score filtering (precision gate)
+    filtered = [d for d in retrieved if d["similarity_score"] >= min_score]
+    if not filtered:
+        yield {"type": "metadata", "sources": [], "confidence": 0.0}
+        yield {"type": "token", "content": "I don't know. The available information is too weak to answer reliably."}
+        return
+
+    # 3. Sort by relevance (descending)
+    filtered.sort(key=lambda x: x["similarity_score"], reverse=True)
+
+    # 4. Redundancy control
+    seen_hashes = set()
+    selected = []
+    for doc in filtered:
+        h = doc["metadata"].get("content_hash")
+        if h and h in seen_hashes: continue
+        seen_hashes.add(h)
+        selected.append(doc)
+        if len(selected) >= final_k: break
+
+    # 5. Context budgeting
+    context_chunks = []
+    total_chars = 0
+    for doc in selected:
+        chunk = doc["content"].strip()
+        if total_chars + len(chunk) > max_context_chars: break
+        context_chunks.append(chunk)
+        total_chars += len(chunk)
+
+    context = "\n\n---\n\n".join(context_chunks)
+    confidence = max(d["similarity_score"] for d in selected)
+    sources = [
+        {
+            "source": d["metadata"].get("source_file", "unknown"),
+            "score": round(d["similarity_score"], 3),
+            "preview": d["content"][:200] + "..."
+        }
+        for d in selected
+    ]
+
+    # Yield metadata first so the UI can show sources immediately
+    yield {"type": "metadata", "sources": sources, "confidence": round(confidence, 3)}
+
+    # 6. Prompt
+    prompt = f"""
+You are an expert assistant.
+
+Rules:
+- Use ONLY the provided context.
+- If the context does not contain the answer, say: "I don't know."
+- Be concise, precise, and factual.
+- Do not speculate.
+
+Context:
+{context}
+
+Question:
+{query}
+
+Answer:
+""".strip()
+
+    # Stream the LLM response
+    for chunk in llm.stream(prompt):
+        if chunk.content:
+            yield {"type": "token", "content": chunk.content}
+
 
 
 

@@ -51,7 +51,7 @@ CHUNK_MINUTES = 5                        # Groq file-size limit → chunk audio
 # Pyannote.ai Cloud API
 PYANNOTE_API_KEY = os.getenv("PYANNOTE_API_KEY")
 PYANNOTE_API_BASE = "https://api.pyannote.ai/v1"
-PYANNOTE_MODEL = "precision-2"           # best model (or "community-1" for free tier)
+PYANNOTE_MODEL = "community-1"           # best model (or "community-1" for free tier)
 PYANNOTE_POLL_INTERVAL = 5               # seconds between polling for job status
 
 
@@ -204,8 +204,10 @@ def scan_for_media(directory: str = ".") -> List[str]:
 
 def make_output_name(input_path: str) -> str:
     """Generate output transcript filename from input: video.mp4 → video_transcript.txt"""
+    dirname = os.path.dirname(input_path)
     base = os.path.splitext(os.path.basename(input_path))[0]
-    return f"{base}_transcript.txt"
+    filename = f"{base}_transcript.txt"
+    return os.path.join(dirname, filename) if dirname else filename
 
 
 def extract_audio_to_wav(input_path: str, output_wav: str):
@@ -504,6 +506,9 @@ def diarize_audio_cloud(audio_path: str) -> List[SpkSegment]:
 
         return spk_segments
 
+    except Exception as e:
+        Log.warn(f"Pyannote Diarization failed: {e}. Falling back to un-diarized transcript.")
+        return []
     finally:
         if os.path.exists(tmp_wav):
             os.remove(tmp_wav)

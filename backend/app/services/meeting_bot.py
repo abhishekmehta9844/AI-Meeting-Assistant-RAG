@@ -16,10 +16,10 @@ import soundfile as sf
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
-import cloudtranscribe
-import sarvam_transcribe
-from ingest import ingest
-from meeting_library import get_meeting_dir, write_meeting_metadata
+from app.services import cloudtranscribe
+from app.services import sarvam_transcribe
+from app.services.ingest import ingest
+from app.services.meeting_library import get_meeting_dir, write_meeting_metadata
 
 PREFERRED_LOOPBACK_DEVICE: str | None = None
 
@@ -88,18 +88,19 @@ def find_best_loopback_wasapi(pa):
 # ────────────────────────────────────────────────────────────────────────────
 
 class MeetingBot:
-    def __init__(self, meeting_url: str, transcription_engine: str = "whisper"):
+    def __init__(self, meeting_url: str, transcription_engine: str = "whisper", meeting_id: str = None):
         self.meeting_url = meeting_url
         self.transcription_engine = transcription_engine
         self.started_at = datetime.now()
         meeting_slug = re.sub(r"[^a-zA-Z0-9]+", "-", meeting_url).strip("-").lower()[-40:] or "google-meet"
-        self.meeting_id = f"{self.started_at.strftime('%Y%m%d_%H%M%S')}_{meeting_slug}"
+        self.meeting_id = meeting_id or f"{self.started_at.strftime('%Y%m%d_%H%M%S')}_{meeting_slug}"
         self.meeting_dir = get_meeting_dir(self.meeting_id)
         self.meeting_dir.mkdir(parents=True, exist_ok=True)
         self.documents_dir = self.meeting_dir / "documents"
         self.documents_dir.mkdir(parents=True, exist_ok=True)
         self.vector_store_dir = self.meeting_dir / "vector_store"
-        self.collection_name = f"meeting_{self.started_at.strftime('%Y%m%d_%H%M%S')}"
+        # Collection name must comply with ChromaDB naming rules (no hyphens if possible, etc)
+        self.collection_name = f"meeting_{self.meeting_id.replace('-', '_')[:40]}"
         self.recording = False
         self.recording_started = threading.Event()
         self.recording_error = None
@@ -425,11 +426,17 @@ class MeetingBot:
                 print()
                 print("=" * 55)
                 print("  MEETING IS BEING RECORDED.")
-                print("  Press Enter to STOP recording and begin transcription.")
+                print("  API will trigger the stop event when requested.")
                 print("=" * 55)
                 print()
 
-                input()
+                # Wait until the stop_recording event is set externally
+                while not self.stop_recording.is_set():
+                    time.sleep(1.0)
+                    # We could also check if the page is still alive or if we got kicked out
+                    if page.is_closed():
+                        print("[*] Browser page was closed externally.")
+                        break
 
             except Exception as exc:
                 print(f"\n[!] Error: {exc}")
@@ -533,6 +540,18 @@ class MeetingBot:
             collection_name=self.collection_name,
             reset_collection=True,
         )
+        
+        print("[*] Generating Meeting Summary...")
+        try:
+            from app.services.summary import generate_meeting_summary
+            summary_data = generate_meeting_summary(content)
+            summary_target = self.meeting_dir / "summary.json"
+            with open(summary_target, "w", encoding="utf-8") as fh:
+                json.dump(summary_data, fh, indent=4)
+            print(f"[*] Summary saved -> {summary_target}")
+        except Exception as e:
+            print(f"[!] Failed to generate summary: {e}")
+
         print("\n[*] Bot sequence complete!")
         print("\n*** RUN `streamlit run app2.py` TO CHAT WITH YOUR MEETING ***\n")
 
