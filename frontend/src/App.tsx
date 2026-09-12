@@ -396,7 +396,8 @@ function ChatTab({ meeting }: { meeting: Meeting }) {
               if (data.type === 'token') {
                 setMessages(prev => {
                   const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1].content += data.content;
+                  const lastIdx = newMsgs.length - 1;
+                  newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
                   return newMsgs;
                 });
               }
